@@ -851,39 +851,6 @@ void readStatus() {
   }
 }
 
-/*
-
-  void readStatus() {
-  //long currentTime = millis();
-  //if (currentTime - lastRxCheck < 200) return; //check every 200 millis
-  //lastRxCheck = currentTime;
-  String msgReceived;
-  if (Serial.available() > 0) {
-    delay(1);
-    //char c = char(Serial.read());
-    //if (c <= 31 && c != 13 && c != 10) break; // carriage return (13) or new line (10) are part of the message
-    //msgReceived += c;
-    msgReceived = Serial.readStringUntil('\n');
-  }
-
-  msgReceived.replace("\r", "");
-  msgReceived.replace("\n", "");
-
-  //0: [Alarm], 1: [Msg:], 2:<...>
-  if (msgReceived && msgReceived != "") {
-    if (msgReceived.startsWith(OK_MESSAGE)) { //ok message
-      okInstruction = true;
-    } else {
-      cursorPos = 0;
-      if (msgReceived.startsWith("<")|| msgReceived.startsWith("[")) { //status message
-        rxBuffer[1] = msgReceived;
-      } else if (msgReceived.startsWith(ALARM_MESSAGE) || msgReceived.startsWith(ERROR_MESSAGE)) { // alarm
-        rxBuffer[0] = msgReceived;
-      }
-    }
-  }
-  } */
-
 void printCurrentMessage() {
   long currentTime = millis();
   if (currentTime - printMsgCheck < (currentOperation == OPERATION_MENU ? 500 : 2000)) return;
