@@ -12,7 +12,6 @@
               MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
               GNU General Public License for more details.
  ***************************************************************************************/
-#include <util/atomic.h>
 #include <LiquidCrystal.h>
 #include <SPI.h>
 #include <SD.h>
@@ -102,8 +101,10 @@ void setup() {
   delay(500);
   Serial.print(F("\n"));
 
-  SD.begin(SD_CS_PIN);
-  root = SD.open("/");
+  sdInitialized = SD.begin(SD_CS_PIN);
+  if (sdInitialized) {
+    root = SD.open("/");
+  }
 
   // Initializes and clears the LCD screen
   lcd.begin(16, 2);
@@ -130,9 +131,9 @@ byte evaluateButton() {
   if (currentTime - buttonReadTime < 200) return BTN_NONE;
   buttonReadTime = currentTime;
 
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    lastButtonRead = analogRead(0);
-  }
+
+  lastButtonRead = analogRead(0);
+
 
   if (lastButtonRead < 50) return BTN_RIGHT; // right
   if (lastButtonRead < 250) return BTN_UP; // up
@@ -148,9 +149,10 @@ void operate() {
 
   printCurrentMessage();
 
+  if (button == currentButton) return;
+  currentButton = button;
+
   if (currentOperation == OPERATION_MENU) {
-    if (button == currentButton) return;
-    currentButton = button;
     switch (currentMenu) {
       case MENU_MAIN:
         menuMain();
@@ -184,8 +186,6 @@ void operate() {
     }
 
   } else if (currentOperation == OPERATION_MILLING) {
-    currentButton = button;
-
     if (currentButton != BTN_NONE) {
       currentMenu = MENU_MILL_OPT;
     }
@@ -624,6 +624,20 @@ void menuHomming() {
 }
 
 void menuFile() {
+  if (!sdInitialized) {
+    if ((sdInitialized = SD.begin(SD_CS_PIN))) {
+      root = SD.open("/");
+    } else {
+      lcd.setCursor(0, 1);
+      printCenterMessagePSTR(F("No SD Card!"), 1);
+      delay(2000);
+      lcd.clear();
+      currentMenu = MENU_MAIN;
+      menuMain();
+      return;
+    }
+  }
+
   currentMessage = "";
   lcd.clear();
   lcd.setCursor(0, currentConfigLine);
@@ -694,7 +708,7 @@ void promptMill() {
   lcd.print(F("*"));
   switch (millOption) {
     case 0:
-      printCenterMessagePSTR(F("Begin Mill?"), 1);
+      printCenterMessagePSTR(F("Begin Milling?"), 1);
       break;
     case 1:
       printCenterMessagePSTR(F("Cancel"), 1);
@@ -759,6 +773,7 @@ void mill() {
 void showMillOptions() {
   lcd.clear();
   lockMessages = true;
+  printCenterMessagePSTR(F("Milling Options"), 0);
   switch (subMenuPage) {
     case 0:
       printCenterMessagePSTR(F(" Pause "), 1);
@@ -777,7 +792,7 @@ void showMillOptions() {
   switch (currentButton) {
     case BTN_LEFT:
       subMenuPage--;
-      if (subMenuPage == 0xFF) subMenuPage = 3;
+      if (subMenuPage == 0xFF) subMenuPage = 0x03;
       break;
     case BTN_RIGHT:
       subMenuPage++;
