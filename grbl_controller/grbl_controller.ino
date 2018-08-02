@@ -16,7 +16,7 @@
 #include <SPI.h>
 #include <SD.h>
 
-#define MENU_SIZE         0x07
+#define MENU_SIZE         0x08
 #define SD_CS_PIN         0x03
 #define BTN_NONE          0x00
 #define BTN_RIGHT         0x01
@@ -34,6 +34,7 @@
 #define MENU_CONFIG       0x08
 #define MENU_MILL         0x09
 #define MENU_MILL_OPT     0x10
+#define MENU_PROBE        0x11
 #define RESET_GRBL        0x18
 #define OPERATION_MILLING 0x00
 #define OPERATION_MENU    0x01
@@ -99,7 +100,7 @@ void setup() {
   }
 
   delay(500);
-  Serial.print(F("\n"));
+  Serial.print(F("G10 P0 L20 X0 Y0 Z0\n"));
 
   sdInitialized = SD.begin(SD_CS_PIN);
   if (sdInitialized) {
@@ -159,6 +160,9 @@ void operate() {
         break;
       case MENU_HOMMING:
         menuHomming();
+        break;
+      case MENU_PROBE:
+        menuProbe();
         break;
       case MENU_FILES:
         menuFile();
@@ -236,21 +240,24 @@ void menuMain() {
       printCenterMessagePSTR(F("HOMMING"), 0);
       break;
     case 1:
-      printCenterMessagePSTR(F("FILES"), 0);
+      printCenterMessagePSTR(F("PROBE"), 0);
       break;
     case 2:
-      printCenterMessagePSTR(F("MOVE"), 0);
+      printCenterMessagePSTR(F("FILES"), 0);
       break;
     case 3:
-      printCenterMessagePSTR(F("STATUS"), 0);
+      printCenterMessagePSTR(F("MOVE"), 0);
       break;
     case 4:
-      printCenterMessagePSTR(F("UNLOCK"), 0);
+      printCenterMessagePSTR(F("STATUS"), 0);
       break;
     case 5:
-      printCenterMessagePSTR(F("RESET"), 0);
+      printCenterMessagePSTR(F("UNLOCK"), 0);
       break;
     case 6:
+      printCenterMessagePSTR(F("RESET"), 0);
+      break;
+    case 7:
       printCenterMessagePSTR(F("CONFIG"), 0);
       break;
   }
@@ -267,21 +274,24 @@ void menuMain() {
           currentMenu = MENU_HOMMING;
           break;
         case 1:
-          currentMenu = MENU_FILES;
+          currentMenu = MENU_PROBE;
           break;
         case 2:
-          currentMenu = MENU_MOVE;
+          currentMenu = MENU_FILES;
           break;
         case 3:
-          currentMenu = MENU_STATUS;
+          currentMenu = MENU_MOVE;
           break;
         case 4:
-          currentMenu = MENU_UNLOCK;
+          currentMenu = MENU_STATUS;
           break;
         case 5:
-          currentMenu = MENU_RESET;
+          currentMenu = MENU_UNLOCK;
           break;
         case 6:
+          currentMenu = MENU_RESET;
+          break;
+        case 7:
           currentMenu = MENU_CONFIG;
           break;
       }
@@ -413,22 +423,34 @@ void moveXY() {
   switch (currentButton) {
     case BTN_LEFT:
       x -= stepSizeOpt[stepSizeIdx];
+      Serial.print(F("G91 G0 X-"));
+      Serial.print(stepSizeOpt[stepSizeIdx]);
+      Serial.print(F("\n"));
       break;
     case BTN_RIGHT:
       x += stepSizeOpt[stepSizeIdx];
+      Serial.print(F("G91 G0 X"));
+      Serial.print(stepSizeOpt[stepSizeIdx]);
+      Serial.print(F("\n"));
       break;
     case BTN_DOWN:
       y -= stepSizeOpt[stepSizeIdx];
+      Serial.print(F("G91 G0 Y-"));
+      Serial.print(stepSizeOpt[stepSizeIdx]);
+      Serial.print(F("\n"));
       break;
     case BTN_UP:
       y += stepSizeOpt[stepSizeIdx];
+      Serial.print(F("G91 G0 Y"));
+      Serial.print(stepSizeOpt[stepSizeIdx]);
+      Serial.print(F("\n"));
       break;
     case BTN_NONE:
       exec = false;
       break;
   }
   if (exec) {
-    jog();
+    //jog();
     printMoveInfo();
   }
 }
@@ -439,22 +461,28 @@ void moveZ() {
     case BTN_UP:
     case BTN_RIGHT:
       z += stepSizeOpt[stepSizeIdx];
+      Serial.print(F("G91 G0 Z"));
+      Serial.print(stepSizeOpt[stepSizeIdx]);
+      Serial.print(F("\n"));
       break;
     case BTN_LEFT:
     case BTN_DOWN:
       z -= stepSizeOpt[stepSizeIdx];
+      Serial.print(F("G91 G0 Z-"));
+      Serial.print(stepSizeOpt[stepSizeIdx]);
+      Serial.print(F("\n"));
       break;
     case BTN_NONE:
       exec = false;
       break;
   }
   if (exec) {
-    jog();
+    //jog();
     printMoveInfo();
   }
 }
 
-void jog() {
+/**void jog() {
   Serial.print(F("G0 X"));
   Serial.print(x);
   Serial.print(F(" Y"));
@@ -462,7 +490,8 @@ void jog() {
   Serial.print(F(" Z"));
   Serial.print(z);
   Serial.print(F("\n"));
-}
+  }
+**/
 
 void selectResetAxis() {
   switch (currentButton) {
@@ -477,12 +506,13 @@ void selectResetAxis() {
     case BTN_SELECT:
       switch (resetAxisIdx) {
         case 0: //reset XY
-          //msgToSend = "G92 X0 Y0\n";
-          Serial.print(F("G92 X0 Y0\n"));
+          Serial.print(F("G10 P0 L20 X0 Y0\n"));
+          x = 0.0;
+          y = 0.0;
           break;
         case 1: //reset Z
-          Serial.print(F("G92 Z0\n"));
-          //msgToSend = "G92 Z0\n";
+          Serial.print(F("G10 P0 L20 Z0\n"));
+          z = 0.0;
           break;
         case 2: //cancel
           resetAxisIdx = 0;
@@ -516,7 +546,6 @@ void menuConfig() {
   lcd.print(F("*"));
   printCenterMessagePSTR(F("grbl config"), 0);
   //lockMessages = true;
-  //msgToSend = "$$\n"; //TODO
 
   switch (currentButton) {
     case BTN_LEFT:
@@ -551,7 +580,6 @@ void handleConfigOptions() {
 }
 
 void unlock() {
-  //msgToSend = "$X\n";
   Serial.print(F("$X\n"));
   locked = false;
 }
@@ -559,15 +587,12 @@ void unlock() {
 void showStatus() {
   switch (statusCommand) {
     case 0:
-      //msgToSend = "?\n";
       Serial.print(F("?\n"));
       break;
     case 1:
-      //msgToSend = "$G\n";
       Serial.print(F("$G\n"));
       break;
     case 2:
-      //msgToSend = "$I\n";
       Serial.print(F("$I\n"));
       break;
   }
@@ -605,7 +630,7 @@ void menuHomming() {
   currentMessage = "";
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.write(F(">"));
+  lcd.print(F(">"));
   lcd.setCursor(2, 0);
   lcd.print(F("Start cycle?"));
 
@@ -615,10 +640,31 @@ void menuHomming() {
       break;
 
     case BTN_SELECT:
-      //msgToSend = "$H\n";
       Serial.print(F("$H\n"));
+      Serial.print(F("G10 P0 L20 X0 Y0\n"));
       locked = false;
       currentMenu = MENU_MAIN;
+      break;
+  }
+}
+
+void menuProbe() {
+  currentMessage = "";
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(F(">"));
+  lcd.setCursor(2, 0);
+  lcd.print(F("Start probe?"));
+
+  switch (currentButton) {
+    case BTN_LEFT:
+      currentMenu = MENU_MAIN;
+      break;
+
+    case BTN_SELECT:
+      Serial.print(F("G90 G0 X50 Y50 Z0\n"));
+      Serial.print(F("G38.2 F10 Z-100\n"));
+      Serial.print(F("G10 P0 L20 Z1.5\n"));
       break;
   }
 }
@@ -662,7 +708,6 @@ void menuFile() {
   }
 
   printCenterMessage(currentFile.name(), 1);
-
   if (currentConfigLine == 0) {
     switch (currentButton) {
       case BTN_DOWN:
