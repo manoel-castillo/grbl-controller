@@ -100,7 +100,6 @@ void setup() {
   }
 
   delay(500);
-  Serial.print(F("G10 P0 L20 X0 Y0 Z0\n"));
 
   sdInitialized = SD.begin(SD_CS_PIN);
   if (sdInitialized) {
