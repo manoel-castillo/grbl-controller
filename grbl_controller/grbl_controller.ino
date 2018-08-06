@@ -31,7 +31,7 @@
 #define MENU_STATUS       0x05
 #define MENU_RESET        0x06
 #define MENU_UNLOCK       0x07
-#define MENU_CONFIG       0x08
+#define MENU_SLEEP        0x08
 #define MENU_MILL         0x09
 #define MENU_MILL_OPT     0x10
 #define MENU_PROBE        0x11
@@ -183,8 +183,8 @@ void operate() {
         unlock();
         currentMenu = MENU_MAIN;
         break;
-      case MENU_CONFIG:
-        menuConfig();
+      case MENU_SLEEP:
+        menuSleep();
         break;
     }
 
@@ -257,7 +257,7 @@ void menuMain() {
       printCenterMessagePSTR(F("RESET"), 0);
       break;
     case 7:
-      printCenterMessagePSTR(F("CONFIG"), 0);
+      printCenterMessagePSTR(F("SLEEP"), 0);
       break;
   }
 
@@ -291,7 +291,7 @@ void menuMain() {
           currentMenu = MENU_RESET;
           break;
         case 7:
-          currentMenu = MENU_CONFIG;
+          currentMenu = MENU_SLEEP;
           break;
       }
 
@@ -329,6 +329,12 @@ void menuMove() {
       printCenterMessagePSTR(F("Reset Axis"), 0);
       break;
     case 4:
+      printCenterMessagePSTR(F("Move To Center"), 0);
+      break;
+    case 5:
+      printCenterMessagePSTR(F("Move To Zero"), 0);
+      break;
+    case 6:
       printCenterMessagePSTR(F("Exit"), 0);
       break;
   }
@@ -340,7 +346,7 @@ void menuMove() {
   if (currentConfigLine == 0) { //selectiong options
     switch (currentButton) {
       case BTN_SELECT:
-        if (subMenuPage == 4) {
+        if (subMenuPage == 6) {
           subMenuPage = 0;
           currentConfigLine = 0;
           currentMenu = MENU_MAIN;
@@ -351,11 +357,11 @@ void menuMove() {
 
       case BTN_LEFT:
         subMenuPage--;
-        if (subMenuPage == 0xFF) subMenuPage = 4;
+        if (subMenuPage == 0xFF) subMenuPage = 6;
         break;
       case BTN_RIGHT:
         subMenuPage++;
-        if (subMenuPage > 0x04) subMenuPage = 0;
+        if (subMenuPage > 0x06) subMenuPage = 0;
         break;
     }
   } else { //operating options
@@ -372,6 +378,12 @@ void menuMove() {
         break;
       case 3: // Reset Axis
         selectResetAxis();
+        break;
+      case 4:
+        Serial.print(F("G90 F1000 X300 Y300\n"));
+        break;
+      case 5:
+        Serial.print(F("G90 F1000 X0 Y0\n"));
         break;
     }
   }
@@ -537,45 +549,21 @@ void selectStepSize() {
   }
 }
 
-//TODO
-void menuConfig() {
+void menuSleep() {
   String options[] = {};
   lcd.clear();
   lcd.setCursor(0, currentConfigLine);
-  lcd.print(F("*"));
-  printCenterMessagePSTR(F("grbl config"), 0);
-  //lockMessages = true;
+  printCenterMessagePSTR(F("Sleep?"), 0);
 
   switch (currentButton) {
     case BTN_LEFT:
-      if (currentConfigLine == 1) {
-        //TODO select the $x config
-        subMenuPage--; // must verify the options length
-        handleConfigOptions();
-      } else {
-        currentMenu = MENU_MAIN;
-        subMenuPage = 0;
-      }
-      break;
-    case BTN_RIGHT:
-      if (currentConfigLine == 1) {
-        subMenuPage++; // must verify the options length
-        handleConfigOptions();
-      }
+      currentMenu = MENU_MAIN;
+      subMenuPage = 0;
       break;
     case BTN_SELECT:
+      Serial.print(F("$SLP\n"));
       break;
-    case BTN_UP:
-    case BTN_DOWN:
-      if (currentConfigLine == 0) currentConfigLine = 1;
-      else currentConfigLine = 0;
-      break;
-
   }
-}
-
-void handleConfigOptions() {
-  //TODO shows grbl configs $x and alter values
 }
 
 void unlock() {
